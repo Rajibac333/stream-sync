@@ -2271,3 +2271,6 @@ The UI polish is the visual heart.
 The AI assistant is the productivity layer.
 
 Together they form the complete product.
+
+
+::
