@@ -1,0 +1,7 @@
+/* StreamSync stylesheet entry. Order matters: Tailwind first so `@theme inline`
+   in tokens.css can extend it, base last so element defaults win over resets. */
+@import 'tailwindcss';
+@import './fonts.css';
+@import './tokens.css';
+@import './base.css';
+@import './editor.css';

@@ -1,0 +1,67 @@
+# Runtime dependencies shared by every environment.
+#
+# Only packages the backend actually uses today belong here. Channels, Celery
+# and the AI provider SDK arrive with the milestones that need them (README
+# §32) rather than being installed speculatively.
+
+Django==5.1.6
+djangorestframework==3.15.2
+
+# JWT authentication, with the token_blacklist app used to revoke a refresh
+# token at logout and on rotation. (README §19)
+djangorestframework-simplejwt==5.4.0
+
+# PostgreSQL driver. psycopg 3 is the adapter Django 5.x targets; the `binary`
+# extra ships prebuilt wheels so no local libpq toolchain is required.
+psycopg[binary]==3.2.4
+
+# Reads configuration from the environment and parses DATABASE_URL /
+# REDIS_URL style values, keeping settings free of ad-hoc os.environ parsing.
+django-environ==0.12.0
+
+# Browser access control for the Vite frontend. (README §25)
+django-cors-headers==4.6.0
+
+# OpenAPI 3 schema generation. Wired at the foundation so every endpoint added
+# in later milestones is documented by construction. (README §28)
+drf-spectacular==0.28.0
+
+# Serves collected static files (Django admin, OpenAPI UI) from the app server
+# so a production container needs no separate web server.
+whitenoise==6.8.2
+
+# WebSockets. `channels[daphne]` also gives `runserver` an ASGI server, so
+# sockets work in local development without a second process. (README §15)
+channels[daphne]==4.2.0
+
+# Redis-backed channel layer: the fan-out bus that lets one worker's broadcast
+# reach clients connected to another. Required for more than one process.
+channels-redis==4.2.1
+
+# Pinned below 6.0 deliberately. cbor2 6.x builds a Rust extension and has no
+# wheels for this platform, so installing it needs a Rust toolchain nobody
+# should need to deploy a Django app. 5.x is pure-Python with wheels, and
+# autobahn only uses it for a serializer Channels does not exercise.
+cbor2==5.9.0
+
+# AI provider SDKs. Each is imported only by its own apps/ai/providers/*.py
+# module, and only when that provider is selected, so a deployment running the
+# deterministic provider never loads either. (README §14)
+anthropic==0.120.2
+groq==1.6.0
+
+# Verifies Google Sign-In ID tokens against Google's published public keys —
+# signature, expiry, issuer and audience. Used only by
+# apps/accounts/services.py::_verify_google_credential. (README §19)
+google-auth==2.36.0
+
+# google-auth's HTTP transport for fetching Google's public certificates.
+# Declared explicitly rather than left as an unpinned transitive dependency —
+# google-auth treats it as an optional extra, so nothing installs it
+# automatically.
+requests==2.34.2
+
+# Background jobs: notification fan-out now, AI processing in Milestone 9.
+# The Redis extra brings in the client used for both broker and result backend.
+# (README §22)
+celery[redis]==5.4.0

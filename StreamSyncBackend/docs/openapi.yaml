@@ -1,0 +1,3706 @@
+openapi: 3.0.3
+info:
+  title: StreamSync API
+  version: 1.0.0
+  description: Real-time collaborative workspace backend. Workspaces, projects, documents,
+    tasks, activity and AI assistance.
+paths:
+  /api/health/:
+    get:
+      operationId: health
+      description: Returns 200 whenever the process can serve requests. Checks no
+        external dependency — use the readiness probe for that.
+      summary: Liveness probe
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                Healthy:
+                  value:
+                    status: ok
+                    service: streamsync-backend
+                    version: 1.0.0
+                    environment: local
+                    time: '2026-08-03T10:15:00+00:00'
+          description: ''
+  /api/health/ready/:
+    get:
+      operationId: health_ready
+      description: Verifies every backing service this instance needs. Returns 200
+        when all checks pass and 503 when any of them fails.
+      summary: Readiness probe
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/auth/register/:
+    post:
+      operationId: auth_register
+      description: Creates an account and signs the new user in. Passwords are checked
+        against Django's configured validators; failures come back as field errors
+        on `password`.
+      summary: Create an account
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              examples:
+                Session:
+                  value:
+                    user:
+                      id: 6f1b7c58-6d3a-4a5e-9e5e-9c0b1f2a3d4e
+                      name: Raj Kumar
+                      email: raj@streamsync.app
+                      avatar_url: null
+                      title: null
+                      created_at: '2026-08-03T10:15:00Z'
+                    access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    expires_at: '2026-08-03T10:30:00Z'
+          description: Authenticated. The refresh token is set as an httpOnly cookie
+            and is deliberately absent from this body.
+        '400':
+          description: Validation error, e.g. email already registered.
+        '429':
+          description: Too many registration attempts.
+  /api/auth/login/:
+    post:
+      operationId: auth_login
+      description: Exchanges email and password for a token pair. Wrong credentials
+        and unknown accounts return an identical 401, so this endpoint cannot be used
+        to discover which emails are registered.
+      summary: Sign in
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              examples:
+                Session:
+                  value:
+                    user:
+                      id: 6f1b7c58-6d3a-4a5e-9e5e-9c0b1f2a3d4e
+                      name: Raj Kumar
+                      email: raj@streamsync.app
+                      avatar_url: null
+                      title: null
+                      created_at: '2026-08-03T10:15:00Z'
+                    access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    expires_at: '2026-08-03T10:30:00Z'
+          description: Authenticated. The refresh token is set as an httpOnly cookie
+            and is deliberately absent from this body.
+        '400':
+          description: Malformed request body.
+        '401':
+          description: Incorrect email or password.
+        '429':
+          description: Too many sign-in attempts.
+  /api/auth/google/:
+    post:
+      operationId: auth_google
+      description: Exchanges a verified Google ID token — the `credential` Google's
+        Sign In With Google button hands the frontend — for a StreamSync session.
+        The first sign-in for a given Google identity creates the account automatically;
+        an existing password account sharing the same verified email is linked rather
+        than duplicated.
+      summary: Sign in with Google
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              examples:
+                Session:
+                  value:
+                    user:
+                      id: 6f1b7c58-6d3a-4a5e-9e5e-9c0b1f2a3d4e
+                      name: Raj Kumar
+                      email: raj@streamsync.app
+                      avatar_url: null
+                      title: null
+                      created_at: '2026-08-03T10:15:00Z'
+                    access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    expires_at: '2026-08-03T10:30:00Z'
+          description: Authenticated. The refresh token is set as an httpOnly cookie
+            and is deliberately absent from this body.
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              examples:
+                Session:
+                  value:
+                    user:
+                      id: 6f1b7c58-6d3a-4a5e-9e5e-9c0b1f2a3d4e
+                      name: Raj Kumar
+                      email: raj@streamsync.app
+                      avatar_url: null
+                      title: null
+                      created_at: '2026-08-03T10:15:00Z'
+                    access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    expires_at: '2026-08-03T10:30:00Z'
+          description: Authenticated. The refresh token is set as an httpOnly cookie
+            and is deliberately absent from this body.
+        '401':
+          description: The Google credential could not be verified.
+        '429':
+          description: Too many attempts.
+        '503':
+          description: Google sign-in is not configured.
+  /api/auth/refresh/:
+    post:
+      operationId: auth_refresh
+      description: Reads the refresh token from its httpOnly cookie, revokes it and
+        issues a new pair. The request body is ignored. Returns the user as well as
+        the access token so a page reload can restore the session in one round trip.
+      summary: Refresh the session
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              examples:
+                Session:
+                  value:
+                    user:
+                      id: 6f1b7c58-6d3a-4a5e-9e5e-9c0b1f2a3d4e
+                      name: Raj Kumar
+                      email: raj@streamsync.app
+                      avatar_url: null
+                      title: null
+                      created_at: '2026-08-03T10:15:00Z'
+                    access: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    expires_at: '2026-08-03T10:30:00Z'
+          description: Authenticated. The refresh token is set as an httpOnly cookie
+            and is deliberately absent from this body.
+        '401':
+          description: Missing, expired or already-used refresh token.
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout
+      description: 'Blacklists the refresh token and clears its cookie. Idempotent:
+        returns 204 even when there was no session to end.'
+      summary: Sign out
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '204':
+          description: Signed out.
+  /api/auth/me/:
+    get:
+      operationId: auth_me
+      description: |-
+        The signed-in user.
+
+        Uses the project-wide default permission (IsAuthenticated), so it is also
+        the smallest possible check that JWT authentication is wired up correctly.
+        Stated explicitly rather than inherited, because the security of this
+        endpoint should be readable without opening the settings module.
+      summary: Current user
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '401':
+          description: No or invalid access token.
+  /api/workspaces/:
+    get:
+      operationId: workspaces_list
+      description: Only workspaces where the caller holds an active membership. Pending
+        invitations are not included — see `/api/workspaces/invitations/`.
+      summary: List my workspaces
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkspaceList'
+          description: ''
+    post:
+      operationId: workspaces_create
+      description: The creator becomes its owner in the same transaction.
+      summary: Create a workspace
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+          description: ''
+  /api/workspaces/invitations/:
+    get:
+      operationId: workspaces_my_invitations
+      description: 'Names the workspace and the inviter: this is what the recipient
+        decides on, and it is not reachable from anywhere else — a workspace you have
+        not joined is absent from GET /api/workspaces/.'
+      summary: My pending invitations
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPendingInvitationList'
+          description: ''
+  /api/workspaces/{workspace_id}/:
+    get:
+      operationId: workspaces_retrieve
+      description: 404 for a workspace the caller is not a member of.
+      summary: Workspace detail
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+          description: ''
+        '404':
+          description: Not found.
+    patch:
+      operationId: workspaces_update
+      description: Owner only. The slug is fixed at creation and never changes.
+      summary: Rename a workspace
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkspaceUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+          description: ''
+        '403':
+          description: Not the owner.
+    delete:
+      operationId: workspaces_destroy
+      description: Owner only. Removes every membership with it.
+      summary: Delete a workspace
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Deleted.
+  /api/workspaces/{workspace_id}/members/:
+    get:
+      operationId: workspaces_members_list
+      description: Active members and pending invitations together, distinguished
+        by `status`. Any member of the workspace may read this.
+      summary: List members
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkspaceMemberList'
+          description: ''
+  /api/workspaces/{workspace_id}/members/{membership_id}/:
+    patch:
+      operationId: workspaces_member_update
+      description: Owner only. The owner's own role cannot be changed here.
+      summary: Change a member's role
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateMemberRoleRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+          description: ''
+    delete:
+      operationId: workspaces_member_remove
+      description: The owner may remove anyone; any member may remove themselves.
+        The owner cannot be removed — transfer ownership first.
+      summary: Remove a member or leave
+      parameters:
+      - in: path
+        name: membership_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Removed.
+  /api/workspaces/{workspace_id}/invitations/:
+    post:
+      operationId: workspaces_invite
+      description: Owner only. Creates a membership in the `invited` state. The invitee
+        must already have a StreamSync account — emailing a signup link needs the
+        mail pipeline from Milestone 8.
+      summary: Invite a member
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteMemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+          description: ''
+        '400':
+          description: Unknown email, or owner role requested.
+        '403':
+          description: Not the workspace owner.
+        '409':
+          description: Already a member or already invited.
+  /api/workspaces/{workspace_id}/invitations/accept/:
+    post:
+      operationId: workspaces_invitation_accept
+      description: |-
+        Accept an invitation.
+
+        Cannot use `visible_workspaces`, which by definition excludes workspaces
+        the caller has not joined. The invitation itself is the authorization: the
+        lookup is scoped to an INVITED membership belonging to the caller, so
+        nobody can accept an invitation addressed to someone else.
+      summary: Accept an invitation
+      parameters:
+      - in: path
+        name: workspace_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - workspaces
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+          description: ''
+        '400':
+          description: No pending invitation.
+        '404':
+          description: No such workspace.
+  /api/projects/:
+    get:
+      operationId: projects_list
+      summary: List projects
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -created_at
+          - -due_date
+          - -name
+          - -updated_at
+          - created_at
+          - due_date
+          - name
+          - updated_at
+        description: Sort field. Defaults to -updated_at.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Match name or description.
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - archived
+          - completed
+          - on_hold
+          - planning
+        description: Filter by lifecycle status.
+      - in: query
+        name: workspace
+        schema:
+          type: string
+        description: Filter by workspace id.
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectList'
+          description: ''
+    post:
+      operationId: projects_create
+      description: Requires the editor or owner role in the target workspace.
+      summary: Create a project
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+        '403':
+          description: Viewers cannot create projects.
+        '404':
+          description: No such workspace for this caller.
+  /api/projects/{project_id}/:
+    get:
+      operationId: projects_retrieve
+      summary: Project detail
+      parameters:
+      - in: path
+        name: project_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+        '404':
+          description: Not found.
+    patch:
+      operationId: projects_update
+      description: Requires the editor or owner role. Viewers are read-only.
+      summary: Update a project
+      parameters:
+      - in: path
+        name: project_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+        '403':
+          description: Read-only role.
+    delete:
+      operationId: projects_destroy
+      description: Workspace owner only. Documents filed under the project survive
+        and become unfiled rather than being deleted with it.
+      summary: Delete a project
+      parameters:
+      - in: path
+        name: project_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Deleted.
+  /api/documents/:
+    get:
+      operationId: documents_list
+      description: Bodies are omitted; `excerpt` carries the preview.
+      summary: List documents
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -created_at
+          - -title
+          - -updated_at
+          - created_at
+          - title
+          - updated_at
+        description: Sort field. Defaults to -updated_at.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: project
+        schema:
+          type: string
+        description: Filter by project id, or "none" for unfiled documents.
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Match title or body.
+      - in: query
+        name: workspace
+        schema:
+          type: string
+        description: Filter by workspace id.
+      tags:
+      - documents
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentSummaryList'
+          description: ''
+    post:
+      operationId: documents_create
+      description: Creates the document and its version 1 in one transaction. Requires
+        the editor or owner role in the target workspace.
+      summary: Create a document
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSummary'
+          description: ''
+        '400':
+          description: Project belongs to another workspace.
+        '403':
+          description: Viewers cannot create documents.
+        '404':
+          description: No such workspace for this caller.
+  /api/documents/{document_id}/:
+    get:
+      operationId: documents_retrieve
+      description: Includes the body and the current revision number.
+      summary: Document detail
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - documents
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+          description: ''
+        '404':
+          description: Not found, or not the caller's workspace.
+    patch:
+      operationId: documents_update
+      description: 'Requires the editor or owner role. Send `revision` to make the
+        write conditional: a mismatch returns 409 instead of silently overwriting
+        somebody else''s save.'
+      summary: Edit a document
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+          description: ''
+        '403':
+          description: Viewers cannot edit.
+        '409':
+          description: The document changed while editing.
+    delete:
+      operationId: documents_destroy
+      description: Requires the editor or owner role. Removes its versions with it.
+      summary: Delete a document
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - documents
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Deleted.
+  /api/documents/{document_id}/versions/:
+    get:
+      operationId: documents_versions_list
+      description: Newest first. Snapshot bodies are omitted — restore reads the content
+        server-side, so no client needs it.
+      summary: List a document's versions
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - documents
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentVersionList'
+          description: ''
+  /api/documents/{document_id}/versions/{version_id}/restore/:
+    post:
+      operationId: documents_version_restore
+      description: |-
+        Restoring version 5 creates version 6 containing version 5's content. Version 5 is never modified and versions 6..N are never removed — undoing a restore is just another restore.
+
+        Requires the editor or owner role. Returns the updated document.
+      summary: Restore a version
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: version_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - documents
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+          description: ''
+        '403':
+          description: Viewers cannot restore.
+        '404':
+          description: No such document or version.
+  /api/tasks/:
+    get:
+      operationId: tasks_list
+      summary: List tasks
+      parameters:
+      - in: query
+        name: assignee
+        schema:
+          type: string
+        description: User id, "me" for your own, or "none" for unassigned.
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -created_at
+          - -due_date
+          - -priority
+          - -title
+          - -updated_at
+          - created_at
+          - due_date
+          - priority
+          - title
+          - updated_at
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: priority
+        schema:
+          type: string
+          enum:
+          - high
+          - low
+          - medium
+          - urgent
+      - in: query
+        name: project
+        schema:
+          type: string
+        description: Filter by project id.
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Match title or description.
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - done
+          - in_progress
+          - review
+          - todo
+      - in: query
+        name: workspace
+        schema:
+          type: string
+        description: Filter by workspace id.
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskList'
+          description: ''
+    post:
+      operationId: tasks_create
+      description: Requires the editor or owner role in the target workspace.
+      summary: Create a task
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+        '400':
+          description: Assignee is not a workspace member.
+        '403':
+          description: Viewers cannot create tasks.
+        '404':
+          description: No such workspace or project.
+  /api/tasks/{task_id}/:
+    get:
+      operationId: tasks_retrieve
+      summary: Task detail
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+        '404':
+          description: Not found.
+    patch:
+      operationId: tasks_update
+      description: Partial. The board patches `status` alone on every drag. Moving
+        a task into Done records a `task_completed` activity entry.
+      summary: Update a task
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+        '400':
+          description: Assignee is not a workspace member.
+        '403':
+          description: Viewers cannot edit tasks.
+    delete:
+      operationId: tasks_destroy
+      description: Requires the editor or owner role. Removes its comments with it.
+      summary: Delete a task
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Deleted.
+  /api/comments/:
+    get:
+      operationId: comments_list
+      description: |-
+        Returns thread roots with their replies nested, oldest first.
+
+        Deliberately a bare array rather than the paginated envelope: the client renders a whole thread at once, and a comment panel that paged would hide half a conversation. A thread is bounded by the resource it hangs off. See SETUP.md for the README §48 deviation.
+      summary: List threads on a resource
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: resource_id
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: resource_type
+        schema:
+          type: string
+          enum:
+          - document
+          - task
+        required: true
+      tags:
+      - comments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCommentList'
+          description: ''
+    post:
+      operationId: comments_create
+      description: Any active member may comment, including viewers.
+      summary: Start a thread
+      tags:
+      - comments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+        '404':
+          description: No such document or task.
+  /api/comments/{comment_id}/:
+    patch:
+      operationId: comments_update
+      description: '`body` edits the comment and is restricted to its author — not
+        even the owner may rewrite somebody else''s words. `resolved` is a workflow
+        action available to editors, owners and the thread''s author.'
+      summary: Edit a comment, or resolve a thread
+      parameters:
+      - in: path
+        name: comment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - comments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+        '403':
+          description: Not the author, or role too low.
+    delete:
+      operationId: comments_destroy
+      description: The author may delete their own; the workspace owner may delete
+        any, for moderation. Deleting a thread root removes its replies.
+      summary: Delete a comment
+      parameters:
+      - in: path
+        name: comment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - comments
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: Deleted.
+        '403':
+          description: Not yours to delete.
+  /api/comments/{comment_id}/replies/:
+    post:
+      operationId: comments_reply
+      description: Returns the whole updated thread, not just the reply, so the client
+        can re-render the panel from one response. Replying to a reply attaches to
+        the same root — threads stay one level deep.
+      summary: Reply to a thread
+      parameters:
+      - in: path
+        name: comment_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - comments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentReplyCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+  /api/activity/:
+    get:
+      operationId: activity_list
+      description: 'Newest first. Read-only: entries are written by the operations
+        they describe.'
+      summary: Workspace activity timeline
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+          enum:
+          - ai_action
+          - comment_added
+          - document_created
+          - document_edited
+          - member_invited
+          - project_created
+          - task_completed
+          - task_created
+      - in: query
+        name: entity
+        schema:
+          type: string
+        description: Filter to one object's history.
+      - in: query
+        name: entity_type
+        schema:
+          type: string
+          enum:
+          - comment
+          - document
+          - member
+          - project
+          - task
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: workspace
+        schema:
+          type: string
+        description: Filter by workspace id.
+      tags:
+      - activity
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActivityList'
+          description: ''
+  /api/notifications/:
+    get:
+      operationId: notifications_list
+      summary: List my notifications
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - document_shared
+          - mention
+          - project_update
+          - task_assigned
+          - task_completed
+          - workspace_invitation
+      - in: query
+        name: unread
+        schema:
+          type: string
+        description: Set to "true" for unread only.
+      - in: query
+        name: workspace
+        schema:
+          type: string
+        description: Filter by workspace id.
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/notifications/unread-count/:
+    get:
+      operationId: notifications_unread_count
+      description: |-
+        The badge.
+
+        A dedicated endpoint rather than a field on the list response: the badge is
+        polled far more often than the list is opened, and counting is much cheaper
+        than serialising a page. A partial index covers exactly this query.
+      summary: Unread notification count
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: '{"unread_count": 3}'
+  /api/notifications/mark-all-read/:
+    post:
+      operationId: notifications_mark_all_read
+      summary: Mark everything read
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: '{"updated": 7}'
+  /api/notifications/{notification_id}/:
+    patch:
+      operationId: notifications_update
+      description: Only the read flag is writable. Idempotent — marking an already-read
+        notification does not overwrite when it was read.
+      summary: Mark a notification read or unread
+      parameters:
+      - in: path
+        name: notification_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationUpdateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+        '404':
+          description: Not yours, or does not exist.
+  /api/ai/summarize/:
+    post:
+      operationId: ai_summarize_create
+      description: Shared resolution, permissions and throttling.
+      summary: Summarise a document
+      tags:
+      - AI
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentOperationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Summary'
+          description: ''
+        '503':
+          description: 'The AI provider could not be reached, timed out, rate-limited
+            us, or returned an unusable answer. Error codes: AI_SERVICE_UNAVAILABLE,
+            AI_TIMEOUT, AI_RATE_LIMITED, AI_INVALID_RESPONSE, AI_NOT_CONFIGURED.'
+  /api/ai/action-items/:
+    post:
+      operationId: ai_action_items_create
+      description: Returns proposals only. Nothing is created until the client posts
+        the confirmed items to /api/ai/action-items/tasks/.
+      summary: Extract action items
+      tags:
+      - AI
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentOperationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionItems'
+          description: ''
+        '503':
+          description: 'The AI provider could not be reached, timed out, rate-limited
+            us, or returned an unusable answer. Error codes: AI_SERVICE_UNAVAILABLE,
+            AI_TIMEOUT, AI_RATE_LIMITED, AI_INVALID_RESPONSE, AI_NOT_CONFIGURED.'
+  /api/ai/action-items/tasks/:
+    post:
+      operationId: ai_action_items_tasks_create
+      description: The explicit confirmation step. The items are taken as sent — after
+        the user has edited them — and extraction is not re-run, so what is created
+        is what was on screen.
+      summary: Create tasks from confirmed action items
+      tags:
+      - AI
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmActionItemsRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+          description: ''
+  /api/ai/improve/:
+    post:
+      operationId: ai_improve_create
+      description: Shared resolution, permissions and throttling.
+      summary: Rewrite selected text
+      tags:
+      - AI
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewriteRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rewrite'
+          description: ''
+        '503':
+          description: 'The AI provider could not be reached, timed out, rate-limited
+            us, or returned an unusable answer. Error codes: AI_SERVICE_UNAVAILABLE,
+            AI_TIMEOUT, AI_RATE_LIMITED, AI_INVALID_RESPONSE, AI_NOT_CONFIGURED.'
+  /api/ai/ask/:
+    post:
+      operationId: ai_ask_create
+      description: Shared resolution, permissions and throttling.
+      summary: Ask a question about a document
+      tags:
+      - AI
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+          description: ''
+        '503':
+          description: 'The AI provider could not be reached, timed out, rate-limited
+            us, or returned an unusable answer. Error codes: AI_SERVICE_UNAVAILABLE,
+            AI_TIMEOUT, AI_RATE_LIMITED, AI_INVALID_RESPONSE, AI_NOT_CONFIGURED.'
+  /api/search/:
+    get:
+      operationId: search_list
+      description: Scoped to the caller's workspaces. Results are ranked across types
+        and capped; queries shorter than two characters return an empty list.
+      summary: Search documents, projects, tasks and people
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: The query. Under two characters returns [].
+      - in: query
+        name: workspace
+        schema:
+          type: string
+        description: Optional workspace id to narrow the search to one workspace.
+      tags:
+      - search
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+          description: ''
+  /api/dashboard/:
+    get:
+      operationId: dashboard_retrieve
+      description: Counts and the collaborator strip for one workspace. Collaborator
+        presence is derived from recent activity, not from live WebSocket sessions.
+      summary: Workspace dashboard summary
+      parameters:
+      - in: query
+        name: workspace
+        schema:
+          type: string
+        description: Workspace id.
+        required: true
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+          description: ''
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - project_created
+      - document_created
+      - document_edited
+      - task_created
+      - task_completed
+      - member_invited
+      - comment_added
+      - ai_action
+      type: string
+      description: |-
+        * `project_created` - Project created
+        * `document_created` - Document created
+        * `document_edited` - Document edited
+        * `task_created` - Task created
+        * `task_completed` - Task completed
+        * `member_invited` - Member invited
+        * `comment_added` - Comment added
+        * `ai_action` - AI action
+    ActionItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        assignee_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        assignee_name:
+          type: string
+          readOnly: true
+          nullable: true
+        assignee_source:
+          allOf:
+          - $ref: '#/components/schemas/AiAssigneeSource'
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/TaskPriority'
+          readOnly: true
+        source_quote:
+          type: string
+          readOnly: true
+        source_section:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - assignee_id
+      - assignee_name
+      - assignee_source
+      - due_date
+      - id
+      - priority
+      - source_quote
+      - source_section
+      - title
+    ActionItems:
+      type: object
+      description: |-
+        Who produced this, and when.
+
+        On every AI response. `engine` is the real identifier of whatever ran —
+        a model id, or `mock-heuristic` when the deterministic fallback answered —
+        because a UI that says "generated by AI" over rule-based string handling is
+        a UI that has misled its user.
+      properties:
+        engine:
+          type: string
+          readOnly: true
+        generated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActionItem'
+          readOnly: true
+      required:
+      - engine
+      - generated_at
+      - items
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        action:
+          allOf:
+          - $ref: '#/components/schemas/ActionEnum'
+          readOnly: true
+        actor:
+          type: object
+          additionalProperties: {}
+          description: |-
+            Never null, even after the account is gone.
+
+            `actor` is SET_NULL so a departed account cannot pin the log in place,
+            but the client types this as non-null. The name copied into metadata at
+            write time is what makes the entry still readable — which is the whole
+            reason it is copied.
+          readOnly: true
+        target:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        context:
+          type: string
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor
+      - context
+      - created_at
+      - id
+      - target
+      - workspace_id
+    AiAssigneeSource:
+      enum:
+      - named
+      - suggested
+      type: string
+      description: |-
+        * `named` - Named in the document
+        * `suggested` - Suggested by the assistant
+    AiRewriteMode:
+      enum:
+      - improve
+      - shorten
+      - expand
+      - tone
+      type: string
+      description: |-
+        * `improve` - Improve
+        * `shorten` - Shorten
+        * `expand` - Expand
+        * `tone` - Adjust tone
+    AiTone:
+      enum:
+      - professional
+      - friendly
+      - direct
+      type: string
+      description: |-
+        * `professional` - Professional
+        * `friendly` - Friendly
+        * `direct` - Direct
+    Answer:
+      type: object
+      description: |-
+        Who produced this, and when.
+
+        On every AI response. `engine` is the real identifier of whatever ran —
+        a model id, or `mock-heuristic` when the deterministic fallback answered —
+        because a UI that says "generated by AI" over rule-based string handling is
+        a UI that has misled its user.
+      properties:
+        engine:
+          type: string
+          readOnly: true
+        generated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        answer:
+          type: string
+          readOnly: true
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+          readOnly: true
+        grounded:
+          type: boolean
+          readOnly: true
+      required:
+      - answer
+      - citations
+      - engine
+      - generated_at
+      - grounded
+    AskRequest:
+      type: object
+      description: |-
+        The body shared by summarize, action-items and ask.
+
+        `workspace_id` is accepted because the client sends it, and checked against
+        the document rather than trusted: the document's own workspace is what
+        governs access, so a mismatched id is a bug worth rejecting loudly rather
+        than a permission the caller can claim.
+
+        `content` is the unsaved editor body. Optional — without it the stored copy
+        is used — and capped, so the assistant cannot be used as a way to push
+        arbitrary volumes of text through the server.
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+          nullable: true
+        content:
+          type: string
+          nullable: true
+          maxLength: 1000000
+        question:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - document_id
+      - question
+    AssignableWorkspaceRole:
+      enum:
+      - editor
+      - viewer
+      type: string
+      description: |-
+        * `editor` - Editor
+        * `viewer` - Viewer
+    Citation:
+      type: object
+      properties:
+        quote:
+          type: string
+          readOnly: true
+        section:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - quote
+      - section
+    Collaborator:
+      type: object
+      description: |-
+        The minimal user shape used inside other resources.
+
+        Avatar stacks, "last edited by" labels and member lists need a name and a
+        picture, not an email address. Keeping this separate from UserSerializer
+        means embedding a user somewhere new does not quietly widen how much
+        personal data that endpoint discloses.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          title: Full name
+          description: Display name shown to collaborators.
+        avatar_url:
+          type: string
+          readOnly: true
+      required:
+      - avatar_url
+      - id
+      - name
+    CollaboratorPresence:
+      type: object
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CollaboratorPresenceStatusEnum'
+          readOnly: true
+        activity:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - activity
+      - status
+      - user
+    CollaboratorPresenceStatusEnum:
+      enum:
+      - online
+      - idle
+      - offline
+      type: string
+      description: |-
+        * `online` - online
+        * `idle` - idle
+        * `offline` - offline
+    Comment:
+      type: object
+      description: A thread root, with its replies.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        resource_type:
+          type: string
+          readOnly: true
+        resource_id:
+          type: string
+          format: uuid
+          readOnly: true
+        author:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        mentions:
+          readOnly: true
+        quoted_text:
+          type: string
+          nullable: true
+          readOnly: true
+        resolved:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        edited_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        replies:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: |-
+            Prefetched by the view, so this costs no query per thread.
+
+            Falls back to the relation when the serializer is used outside that
+            queryset — a correctness fallback, not the expected path.
+          readOnly: true
+      required:
+      - author
+      - body
+      - created_at
+      - edited_at
+      - id
+      - mentions
+      - quoted_text
+      - replies
+      - resolved
+      - resource_id
+      - resource_type
+    CommentCreateRequest:
+      type: object
+      description: |-
+        Creation input.
+
+        The author comes from the session. `mention_ids` are validated against
+        workspace membership in the service — unknown ids are dropped rather than
+        rejected, so a stale client cannot lose someone's comment.
+      properties:
+        resource_type:
+          $ref: '#/components/schemas/CommentResource'
+        resource_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        mention_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+        quoted_text:
+          type: string
+          nullable: true
+          default: ''
+          maxLength: 500
+      required:
+      - body
+      - resource_id
+      - resource_type
+    CommentReplyCreateRequest:
+      type: object
+      description: Reply input. The resource is inherited from the thread, never sent.
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        mention_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+      required:
+      - body
+    CommentResource:
+      enum:
+      - document
+      - task
+      type: string
+      description: |-
+        * `document` - Document
+        * `task` - Task
+    ConfirmActionItemsRequest:
+      type: object
+      description: Input for `POST /api/ai/action-items/tasks/`.
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfirmedActionItemRequest'
+          maxItems: 12
+      required:
+      - document_id
+      - items
+      - project_id
+    ConfirmedActionItemRequest:
+      type: object
+      description: |-
+        One action item as the user approved it.
+
+        The client sends these *after* editing, and they are taken at face value —
+        extraction is not re-run. That is the point of the confirmation step: what
+        gets created is what was on screen when the button was pressed.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/TaskPriority'
+          default: medium
+        source_quote:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - title
+    DashboardSummary:
+      type: object
+      properties:
+        active_project_count:
+          type: integer
+          readOnly: true
+        open_task_count:
+          type: integer
+          readOnly: true
+        due_today_count:
+          type: integer
+          readOnly: true
+        completed_this_week_count:
+          type: integer
+          readOnly: true
+        collaborators:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollaboratorPresence'
+          readOnly: true
+      required:
+      - active_project_count
+      - collaborators
+      - completed_this_week_count
+      - due_today_count
+      - open_task_count
+    DocumentCreateRequest:
+      type: object
+      description: |-
+        Creation input.
+
+        `workspace_id` and `project_id` are validated against the caller's own
+        access in the view; neither id is trusted as given. The author comes from
+        the session, never the body.
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        content:
+          type: string
+          default: ''
+      required:
+      - title
+      - workspace_id
+    DocumentDetail:
+      type: object
+      description: The full record, including the body the editor loads.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        project_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        project_name:
+          type: string
+          nullable: true
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        excerpt:
+          type: string
+          readOnly: true
+        author:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        last_edited_by:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        collaborators:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: |-
+            Everyone who has contributed to this document.
+
+            Derived from the people on the record — its author, its last editor and
+            the authors of its versions — rather than stored on a join table. There
+            is no separate notion of "contributor" to maintain, and the set is
+            exactly the union of those, so a table would be a second source of
+            truth that could disagree.
+          readOnly: true
+        active_collaborator_ids:
+          type: array
+          items:
+            type: string
+          description: |-
+            Who is in the document right now.
+
+            Always empty in this milestone. Presence is delivered over the
+            WebSocket, which does not exist until Milestone 7 — so nobody is
+            connected, and an empty list is the truthful answer rather than a
+            placeholder. (README §42)
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        content:
+          type: string
+          readOnly: true
+        revision:
+          type: integer
+          readOnly: true
+      required:
+      - active_collaborator_ids
+      - author
+      - collaborators
+      - content
+      - created_at
+      - excerpt
+      - id
+      - last_edited_by
+      - project_id
+      - project_name
+      - revision
+      - title
+      - updated_at
+      - workspace_id
+    DocumentOperationRequest:
+      type: object
+      description: |-
+        The body shared by summarize, action-items and ask.
+
+        `workspace_id` is accepted because the client sends it, and checked against
+        the document rather than trusted: the document's own workspace is what
+        governs access, so a mismatched id is a bug worth rejecting loudly rather
+        than a permission the caller can claim.
+
+        `content` is the unsaved editor body. Optional — without it the stored copy
+        is used — and capped, so the assistant cannot be used as a way to push
+        arbitrary volumes of text through the server.
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+          nullable: true
+        content:
+          type: string
+          nullable: true
+          maxLength: 1000000
+      required:
+      - document_id
+    DocumentSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        project_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        project_name:
+          type: string
+          nullable: true
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        excerpt:
+          type: string
+          readOnly: true
+        author:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        last_edited_by:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        collaborators:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: |-
+            Everyone who has contributed to this document.
+
+            Derived from the people on the record — its author, its last editor and
+            the authors of its versions — rather than stored on a join table. There
+            is no separate notion of "contributor" to maintain, and the set is
+            exactly the union of those, so a table would be a second source of
+            truth that could disagree.
+          readOnly: true
+        active_collaborator_ids:
+          type: array
+          items:
+            type: string
+          description: |-
+            Who is in the document right now.
+
+            Always empty in this milestone. Presence is delivered over the
+            WebSocket, which does not exist until Milestone 7 — so nobody is
+            connected, and an empty list is the truthful answer rather than a
+            placeholder. (README §42)
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - active_collaborator_ids
+      - author
+      - collaborators
+      - created_at
+      - excerpt
+      - id
+      - last_edited_by
+      - project_id
+      - project_name
+      - title
+      - updated_at
+      - workspace_id
+    DocumentVersion:
+      type: object
+      description: |-
+        One entry in a document's history.
+
+        The body is deliberately absent: a history list renders "Version 12 / Raj /
+        10:42 AM / Added Apple Pay section", and shipping every snapshot's full
+        text would make the list heavier than the document itself. Restore reads
+        the content server-side, so no client ever needs it.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        number:
+          type: integer
+          readOnly: true
+        author:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        summary:
+          type: string
+          readOnly: true
+          description: One line describing the change, e.g. "Added Apple Pay section".
+        is_current:
+          type: boolean
+          description: |-
+            Whether this is the version the editor is currently showing.
+
+            Compared against a number the view supplies once for the whole page,
+            rather than re-querying the maximum for every row.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - created_at
+      - id
+      - is_current
+      - number
+      - summary
+    GoogleLoginRequest:
+      type: object
+      description: |-
+        Google sign-in input.
+
+        `credential` matches the field name Google's own Identity Services library
+        hands the frontend's callback — keeping it means the client forwards the
+        button's payload unchanged rather than renaming a key for no reason. It is
+        the signed ID token JWT, verified server-side in `services.py`; nothing
+        about it is trusted until that verification passes.
+      properties:
+        credential:
+          type: string
+          minLength: 1
+        remember_me:
+          type: boolean
+          default: false
+      required:
+      - credential
+    InviteMemberRequest:
+      type: object
+      description: Invitation input. The inviter comes from the session, never the
+        body.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        role:
+          allOf:
+          - $ref: '#/components/schemas/AssignableWorkspaceRole'
+          default: viewer
+      required:
+      - email
+    LoginRequest:
+      type: object
+      description: |-
+        Login input.
+
+        Credentials are only checked for shape here. Verifying them is
+        authentication, which belongs to the service layer.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+        remember_me:
+          type: boolean
+          default: false
+      required:
+      - email
+      - password
+    MembershipStatus:
+      enum:
+      - active
+      - invited
+      type: string
+      description: |-
+        * `active` - Active
+        * `invited` - Invited
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        type:
+          allOf:
+          - $ref: '#/components/schemas/NotificationTypeEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        actor:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        href:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        read:
+          type: boolean
+          readOnly: true
+      required:
+      - actor
+      - body
+      - created_at
+      - href
+      - id
+      - read
+      - title
+      - type
+    NotificationTypeEnum:
+      enum:
+      - mention
+      - task_assigned
+      - task_completed
+      - document_shared
+      - project_update
+      - workspace_invitation
+      type: string
+      description: |-
+        * `mention` - Mention
+        * `task_assigned` - Task assigned
+        * `task_completed` - Task completed
+        * `document_shared` - Document shared
+        * `project_update` - Project update
+        * `workspace_invitation` - Workspace invitation
+    NullEnum:
+      enum:
+      - null
+    PaginatedActivityList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Activity'
+    PaginatedCommentList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+    PaginatedDocumentSummaryList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentSummary'
+    PaginatedDocumentVersionList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentVersion'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedPendingInvitationList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingInvitation'
+    PaginatedProjectList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+    PaginatedTaskList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    PaginatedWorkspaceList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+    PaginatedWorkspaceMemberList:
+      type: object
+      required:
+      - count
+      - page
+      - page_size
+      - total_pages
+      - results
+      properties:
+        count:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 25
+        total_pages:
+          type: integer
+          example: 2
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
+    PatchedCommentUpdateRequest:
+      type: object
+      description: |-
+        Update input.
+
+        Two distinct operations share this endpoint because the frontend PATCHes
+        both: `body` is an edit (author only) and `resolved` is a workflow action
+        (any editor, or the thread's author). The view applies the right rule to
+        whichever field is present.
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        resolved:
+          type: boolean
+    PatchedDocumentUpdateRequest:
+      type: object
+      description: |-
+        Partial update.
+
+        `workspace_id` is absent by design: moving a document between workspaces
+        would carry it across a tenant boundary.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        revision:
+          type: integer
+          minimum: 1
+        summary:
+          type: string
+          default: ''
+          maxLength: 200
+    PatchedNotificationUpdateRequest:
+      type: object
+      description: |-
+        Update input.
+
+        Only the read flag is writable — everything else was composed by the server
+        when the event happened. A client that could edit `title` could rewrite its
+        own history of what it was told.
+      properties:
+        read:
+          type: boolean
+    PatchedProjectUpdateRequest:
+      type: object
+      description: Partial update. Every field optional; workspace and owner are not
+        here.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        due_date:
+          type: string
+          format: date
+          nullable: true
+    PatchedTaskUpdateRequest:
+      type: object
+      description: |-
+        Partial update.
+
+        Every field optional — the board patches `status` alone on every drag, and
+        sending only what changed means two people editing different fields of the
+        same task do not overwrite each other.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 5000
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+    PatchedUpdateMemberRoleRequest:
+      type: object
+      description: Role change input. Owner is excluded — ownership is transferred.
+      properties:
+        role:
+          $ref: '#/components/schemas/AssignableWorkspaceRole'
+    PatchedWorkspaceUpdateRequest:
+      type: object
+      description: |-
+        Partial update input.
+
+        `slug` is absent by design: it is assigned once and never changes, so that
+        existing links keep working after a rename.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+    PendingInvitation:
+      type: object
+      description: |-
+        An invitation from the invitee's side.
+
+        Distinct from `WorkspaceMemberSerializer`, which describes somebody *within*
+        a workspace you are already looking at and therefore has no reason to name
+        it. Here the workspace is the whole point: the recipient is deciding whether
+        to join, and "you have been invited as an editor" without saying by whom, or
+        to what, is not a decision anyone can make.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_name:
+          type: string
+          readOnly: true
+        workspace_slug:
+          type: string
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceRole'
+          readOnly: true
+        invited_by:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        invited_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - id
+      - invited_at
+      - invited_by
+      - role
+      - workspace_id
+      - workspace_name
+      - workspace_slug
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          description: URL-safe identifier, unique within the workspace.
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ProjectStatus'
+          readOnly: true
+        task_count:
+          type: integer
+          description: |-
+            Annotated by the view's queryset, so this costs no query per project.
+
+            The fallback keeps the serializer usable outside that queryset — a
+            correctness path, not the expected one.
+          readOnly: true
+        completed_task_count:
+          type: integer
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        members:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: |-
+            Who can work on this project.
+
+            There is no project-level membership: access to a project *is* access
+            to its workspace (README §7), so the members are the workspace's active
+            members. The view prefetches them, so this costs no query per row.
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - completed_task_count
+      - created_at
+      - description
+      - due_date
+      - id
+      - members
+      - name
+      - slug
+      - status
+      - task_count
+      - updated_at
+      - workspace_id
+    ProjectCreateRequest:
+      type: object
+      description: |-
+        Creation input.
+
+        `workspace_id` is in the body because the frontend posts to a flat
+        `/api/projects/` rather than a nested route. It is validated against the
+        caller's own workspaces in the view — the id itself is never trusted.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+          default: ''
+          maxLength: 2000
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ProjectStatus'
+          default: planning
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        workspace_id:
+          type: string
+          format: uuid
+      required:
+      - name
+      - workspace_id
+    ProjectStatus:
+      enum:
+      - planning
+      - active
+      - on_hold
+      - completed
+      - archived
+      type: string
+      description: |-
+        * `planning` - Planning
+        * `active` - Active
+        * `on_hold` - On hold
+        * `completed` - Completed
+        * `archived` - Archived
+    RegisterRequest:
+      type: object
+      description: |-
+        Registration input.
+
+        A plain Serializer rather than a ModelSerializer: a ModelSerializer would
+        expose every writable model field by default, so `is_staff` would be one
+        forgotten line away from being settable by an anonymous request.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+      required:
+      - email
+      - name
+      - password
+    Rewrite:
+      type: object
+      description: |-
+        Who produced this, and when.
+
+        On every AI response. `engine` is the real identifier of whatever ran —
+        a model id, or `mock-heuristic` when the deterministic fallback answered —
+        because a UI that says "generated by AI" over rule-based string handling is
+        a UI that has misled its user.
+      properties:
+        engine:
+          type: string
+          readOnly: true
+        generated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        text:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        changed:
+          type: boolean
+          readOnly: true
+      required:
+      - changed
+      - engine
+      - generated_at
+      - note
+      - text
+    RewriteRequestRequest:
+      type: object
+      description: |-
+        Input for `POST /api/ai/improve/`.
+
+        `text` is plain text, never HTML — the frontend is explicit about this and
+        so is the prompt. What comes back is inserted into a document, and a round
+        trip that can carry markup is a round trip that can carry markup somebody
+        else wrote.
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        text:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        mode:
+          $ref: '#/components/schemas/AiRewriteMode'
+        tone:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/AiTone'
+          - $ref: '#/components/schemas/NullEnum'
+      required:
+      - document_id
+      - mode
+      - text
+    SearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        type:
+          allOf:
+          - $ref: '#/components/schemas/SearchResultTypeEnum'
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        subtitle:
+          type: string
+          readOnly: true
+          nullable: true
+        href:
+          type: string
+          readOnly: true
+          nullable: true
+        score:
+          type: number
+          format: double
+          readOnly: true
+      required:
+      - href
+      - id
+      - score
+      - subtitle
+      - title
+      - type
+    SearchResultTypeEnum:
+      enum:
+      - document
+      - project
+      - task
+      - person
+      type: string
+      description: |-
+        * `document` - document
+        * `project` - project
+        * `task` - task
+        * `person` - person
+    Session:
+      type: object
+      description: |-
+        What every successful authentication returns.
+
+        The refresh token is deliberately absent: it travels only as an httpOnly
+        cookie. Putting it in the body would hand it to any script on the page and
+        defeat the reason for the cookie. (README §25)
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        access:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - access
+      - expires_at
+      - user
+    Summary:
+      type: object
+      description: |-
+        Who produced this, and when.
+
+        On every AI response. `engine` is the real identifier of whatever ran —
+        a model id, or `mock-heuristic` when the deterministic fallback answered —
+        because a UI that says "generated by AI" over rule-based string handling is
+        a UI that has misled its user.
+      properties:
+        engine:
+          type: string
+          readOnly: true
+        generated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        summary:
+          type: string
+          readOnly: true
+        key_points:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        decisions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - decisions
+      - engine
+      - generated_at
+      - key_points
+      - summary
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        workspace_id:
+          type: string
+          format: uuid
+          readOnly: true
+        project_id:
+          type: string
+          format: uuid
+          readOnly: true
+        project_name:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TaskStatus'
+          readOnly: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/TaskPriority'
+          readOnly: true
+        assignee:
+          allOf:
+          - $ref: '#/components/schemas/Collaborator'
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        labels:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: |-
+            Always empty for now.
+
+            Labels are a workspace-level catalogue with their own endpoint in the
+            frontend, and they are not part of README §10 or Milestone 5. The field
+            is present so the client renders an empty label row rather than
+            crashing on a missing key. See SETUP.md.
+          readOnly: true
+        comment_count:
+          type: integer
+          description: Annotated by the view; the fallback keeps the serializer reusable.
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assignee
+      - comment_count
+      - created_at
+      - description
+      - due_date
+      - id
+      - labels
+      - priority
+      - project_id
+      - project_name
+      - status
+      - title
+      - updated_at
+      - workspace_id
+    TaskCreateRequest:
+      type: object
+      description: |-
+        Creation input.
+
+        `creator` comes from the session. `workspace_id`, `project_id` and
+        `assignee_id` are all validated against the caller's own access in the view
+        and the service — none of them is trusted as given.
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          default: ''
+          maxLength: 5000
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TaskStatus'
+          default: todo
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/TaskPriority'
+          default: medium
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - project_id
+      - title
+      - workspace_id
+    TaskPriority:
+      enum:
+      - low
+      - medium
+      - high
+      - urgent
+      type: string
+      description: |-
+        * `low` - Low
+        * `medium` - Medium
+        * `high` - High
+        * `urgent` - Urgent
+    TaskStatus:
+      enum:
+      - todo
+      - in_progress
+      - review
+      - done
+      type: string
+      description: |-
+        * `todo` - Todo
+        * `in_progress` - In Progress
+        * `review` - Review
+        * `done` - Done
+    User:
+      type: object
+      description: |-
+        The public shape of a user.
+
+        Explicit `fields` rather than `exclude`: a field added to the model must
+        never appear in an API response merely because someone forgot to hide it.
+        That is how password hashes and internal flags leak.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          title: Full name
+          description: Display name shown to collaborators.
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Email address
+          description: Used to sign in. Case-insensitively unique.
+        avatar_url:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - avatar_url
+      - created_at
+      - email
+      - id
+      - name
+      - title
+    Workspace:
+      type: object
+      description: |-
+        A workspace as seen *by the requesting user*.
+
+        `role` is not a property of the workspace — it is a property of the
+        relationship between this workspace and whoever is asking. It is included
+        here because every screen that renders a workspace also needs to know which
+        actions to offer, and a second request per workspace to find that out would
+        be wasteful.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          description: URL-safe identifier. Assigned at creation and never changes.
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          readOnly: true
+        member_count:
+          type: integer
+          readOnly: true
+        role:
+          type: string
+          nullable: true
+          description: |-
+            Read the annotation the view's queryset attached.
+
+            Falls back to a lookup only when the serializer is used outside that
+            queryset, so the list endpoint stays at one query rather than one per
+            workspace.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - description
+      - id
+      - member_count
+      - name
+      - role
+      - slug
+    WorkspaceCreateRequest:
+      type: object
+      description: |-
+        Creation input.
+
+        A plain Serializer rather than a ModelSerializer so that `owner` and `slug`
+        are simply not accepted from the client. Both are decided by the service —
+        a caller who could set `owner` could create a workspace belonging to
+        somebody else.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          default: ''
+          maxLength: 500
+      required:
+      - name
+    WorkspaceMember:
+      type: object
+      description: One row in the members list — active members and pending invitations.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/WorkspaceRole'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MembershipStatus'
+          readOnly: true
+        joined_at:
+          description: |-
+            Never null, so the client can always render a date.
+
+            An invited person has not joined yet, so the date shown is when they
+            were invited. `status` is what distinguishes the two, and the UI reads
+            that rather than inferring from the timestamp.
+          readOnly: true
+      required:
+      - id
+      - joined_at
+      - role
+      - status
+      - user
+    WorkspaceRole:
+      enum:
+      - owner
+      - editor
+      - viewer
+      type: string
+      description: |-
+        * `owner` - Owner
+        * `editor` - Editor
+        * `viewer` - Viewer
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

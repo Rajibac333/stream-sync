@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="StreamSync — a real-time collaborative workspace for distributed teams."
+    />
+    <title>StreamSync</title>
+
+    <script>
+      /*
+       * Theme resolution, before first paint.
+       *
+       * This must stay inline and synchronous: if React resolved the theme, a
+       * dark-mode user would get a white flash on every cold load. Kept
+       * deliberately dependency-free and wrapped in try/catch because Safari
+       * private mode throws on localStorage access.
+       *
+       * Storage key and values are mirrored in src/store/themeStore.ts.
+       */
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('streamsync-theme')
+          var preference = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'
+          var resolved =
+            preference === 'system'
+              ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+              : preference
+          document.documentElement.setAttribute('data-theme', resolved)
+        } catch (error) {
+          document.documentElement.setAttribute('data-theme', 'light')
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+# Local development and CI dependencies.
+
+-r base.txt
+
+# Testing. (README §26)
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-cov==6.0.0
+
+# Lint and format. Ruff replaces flake8/isort/black with a single fast tool.
+ruff==0.9.6

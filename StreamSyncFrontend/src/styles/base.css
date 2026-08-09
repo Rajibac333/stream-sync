@@ -1,0 +1,195 @@
+/* =============================================================================
+   StreamSync — Base layer
+   Element defaults, focus policy, motion policy. Nothing component-specific.
+   ========================================================================== */
+
+/* Theme is driven by `data-theme` on <html>, set before first paint by the
+   inline script in index.html. This variant is an escape hatch for the rare
+   case a semantic token can't express the difference (e.g. an image filter). */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@layer base {
+  * {
+    border-color: var(--ss-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Anchored scroll targets (document outline, CLAUDE.md §40) must clear the
+       sticky topbar. */
+    scroll-padding-top: calc(var(--spacing-topbar) + 1rem);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--ss-background);
+    color: var(--ss-foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--font-weight-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Inter's tabular figures keep timestamps and counts from jittering as
+       they tick — matters for presence/activity/save-state UI. */
+    font-feature-settings: 'cv11', 'ss01';
+    font-variant-ligatures: contextual;
+  }
+
+  /* Focus policy — one ring, everywhere, driven by --ss-focus.
+     `:focus-visible` only, so pointer users never see a ring but keyboard
+     users always do. (CLAUDE.md §19) */
+  :focus-visible {
+    outline: 2px solid var(--ss-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* We never remove focus rings; components that need a custom ring opt in
+     via .ss-focus-ring rather than by killing the outline. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  ::selection {
+    background-color: var(--ss-primary-subtle);
+    color: var(--ss-primary-subtle-foreground);
+  }
+
+  /* Headings inherit weight from the type scale utilities, not from the
+     browser, so hierarchy stays under token control. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: inherit;
+    font-size: inherit;
+    margin: 0;
+  }
+
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd {
+    margin: 0;
+  }
+
+  button,
+  input,
+  optgroup,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+
+  button {
+    background: none;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  /* Placeholder is supporting text, not content. */
+  ::placeholder {
+    color: var(--ss-foreground-subtle);
+    opacity: 1;
+  }
+
+  /* Scrollbars — present but quiet. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ss-border-strong) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--ss-border-strong);
+    border: 3px solid transparent;
+    border-radius: var(--radius-full);
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ss-muted);
+  }
+}
+
+@layer utilities {
+  /* Visible only to assistive tech. Used for live regions and skip links. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Indeterminate progress sweep for the session-restore boot screen.
+     Declared here rather than inline so `prefers-reduced-motion` below can
+     neutralise it along with everything else. */
+  @keyframes boot-sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(300%);
+    }
+  }
+
+  /* Shared ring for controls that draw their own border (inputs, buttons).
+     Uses box-shadow so the ring hugs the control's own radius. */
+  .ss-focus-ring {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--ss-focus-offset),
+      0 0 0 4px var(--ss-focus);
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   Reduced motion — CLAUDE.md §20
+   A user who has asked the OS to stop animating gets a genuinely still UI, not
+   a faster one. Framer Motion reads the same preference via useReducedMotion,
+   so JS-driven and CSS-driven animation stay in agreement.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

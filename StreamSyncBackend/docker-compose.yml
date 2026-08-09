@@ -1,0 +1,137 @@
+# Reproducible local development stack. (README §30)
+#
+#     docker compose up --build
+#
+# The API is then on http://localhost:8000, with the database exposed on 5432
+# so psql and migrations can be run from the host.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: streamsync-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-streamsync}
+      POSTGRES_USER: ${POSTGRES_USER:-streamsync}
+      # Local development only. Production credentials come from a secret
+      # manager and are never written into a compose file.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-streamsync}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # `backend` waits on this, so it never starts against a database that is
+      # listening but not yet accepting queries.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-streamsync} -d ${POSTGRES_DB:-streamsync}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: streamsync-redis
+    # Load-bearing: the Channels layer, the presence roster, the throttle
+    # counters and the Celery broker all live here. `--appendonly yes` because
+    # losing the broker mid-flight loses queued notifications. (README §23)
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        # Development requirements so pytest and ruff are runnable inside the
+        # container via `docker compose exec`.
+        REQUIREMENTS: development
+    container_name: streamsync-backend
+    command:
+      - python
+      - manage.py
+      - runserver
+      - 0.0.0.0:8000
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-compose-development-key}
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,backend
+      # `postgres` is the compose service name, resolved on the shared network.
+      DATABASE_URL: postgres://${POSTGRES_USER:-streamsync}:${POSTGRES_PASSWORD:-streamsync}@postgres:5432/${POSTGRES_DB:-streamsync}
+      REDIS_URL: redis://redis:6379/0
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      SERVICE_ENVIRONMENT: docker
+      RUN_MIGRATIONS: "true"
+      # Passed through from the host, never written into this file. Unset is a
+      # supported configuration: the assistant then runs the deterministic
+      # provider. (README §14)
+      AI_API_KEY: ${AI_API_KEY:-}
+    volumes:
+      # Live reload against the host checkout. Named volumes keep container-
+      # generated artefacts from being written back into the source tree.
+      - .:/app
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    # Consumes the notification queue. Shares the backend image so the tasks it
+    # runs are byte-identical to the code that queued them — a worker built
+    # separately drifts, and the symptom is a task that fails only in
+    # production. (README §22)
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        REQUIREMENTS: development
+    container_name: streamsync-worker
+    command:
+      - celery
+      - -A
+      - config
+      - worker
+      - --loglevel=info
+      # One task at a time per process, matching CELERY_WORKER_PREFETCH_MULTIPLIER.
+      - --concurrency=2
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-compose-development-key}
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,backend
+      DATABASE_URL: postgres://${POSTGRES_USER:-streamsync}:${POSTGRES_PASSWORD:-streamsync}@postgres:5432/${POSTGRES_DB:-streamsync}
+      REDIS_URL: redis://redis:6379/0
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      SERVICE_ENVIRONMENT: docker
+      AI_API_KEY: ${AI_API_KEY:-}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # No entrypoint override: the shared entrypoint waits for the database,
+    # which a worker needs just as much as the API does.
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_files:
+  media_files:

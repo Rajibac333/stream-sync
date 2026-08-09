@@ -1,0 +1,107 @@
+[project]
+name = "streamsync-backend"
+version = "1.0.0"
+description = "StreamSync — real-time collaborative workspace backend"
+requires-python = ">=3.12"
+
+# Dependencies are pinned in requirements/*.txt, which keeps the split between
+# base/development/production explicit and works with plain pip in Docker.
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    # Surface the first unexpected failure quickly without hiding the rest.
+    "-ra",
+    # Reusing the test database makes the common case (schema unchanged) fast;
+    # --create-db forces a rebuild after a migration is added.
+    "--reuse-db",
+]
+markers = [
+    "integration: exercises a real external dependency (database, cache)",
+]
+# Channels consumers are async, and their tests are coroutines. `strict` makes
+# an un-marked async test an error rather than a silent skip — a skipped
+# WebSocket test that reports as passing is worse than no test.
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    # Warnings are defects in waiting; fail on them rather than scrolling past.
+    "error",
+    "ignore::DeprecationWarning:kombu.*",
+]
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+
+[tool.coverage.run]
+source = ["apps", "common", "config"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "config/wsgi.py",
+    "config/asgi.py",
+    "manage.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — lint and format
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = ["migrations", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "DJ",   # Django-specific checks
+    "S",    # bandit security checks
+    "C4",   # comprehensions
+    "SIM",  # simplification
+    "RUF",
+]
+ignore = [
+    # blank=True on a CharField is the documented Django idiom, not a defect.
+    "DJ001",
+    # `assert` is how pytest expresses expectations.
+    "S101",
+    # Django, DRF and pytest classes are configured through declarative class
+    # attributes — Meta.constraints, permission_classes, fieldsets. Annotating
+    # every one as ClassVar fights the frameworks' own API for no safety gain.
+    "RUF012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Settings modules re-export with `import *` by design (F403/F405), hardcoded
+# development-only keys are intentional and labelled (S105), and 0.0.0.0 in
+# ALLOWED_HOSTS is a hostname entry, not a socket bind (S104).
+"config/settings/*.py" = ["F403", "F405", "S104", "S105"]
+# S105/S106/S107 flag string literals that *look* like credentials. In tests
+# they are fixture keys and throwaway passwords, both of which are the point.
+"tests/*" = ["S105", "S106", "S107"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "common", "config"]

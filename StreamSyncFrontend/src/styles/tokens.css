@@ -1,0 +1,431 @@
+/* =============================================================================
+   StreamSync — Design Tokens
+   -----------------------------------------------------------------------------
+   Two layers, deliberately separated:
+
+     1. PRIMITIVES  (--ss-<ramp>-<step>)  raw palette. Never used in components.
+     2. SEMANTICS   (--ss-<role>)         meaning. This is what components use.
+
+   Only semantic tokens are exposed to Tailwind (via `@theme inline` below), so
+   a component physically cannot reach for `--ss-neutral-400`. Retheming means
+   editing the semantic block, not hunting through JSX. — CLAUDE.md §12
+   ========================================================================== */
+
+/* -----------------------------------------------------------------------------
+   1. PRIMITIVES
+   OKLCH throughout: perceptually uniform, so a "600" reads with the same weight
+   across every hue. Neutrals carry a slight cool cast (hue 264) so surfaces feel
+   technical rather than warm/beige.
+   -------------------------------------------------------------------------- */
+:root {
+  /* Neutral — cool slate */
+  --ss-neutral-0: oklch(1 0 0);
+  --ss-neutral-50: oklch(0.985 0.002 264);
+  --ss-neutral-100: oklch(0.968 0.003 264);
+  --ss-neutral-200: oklch(0.925 0.005 264);
+  --ss-neutral-300: oklch(0.869 0.007 264);
+  --ss-neutral-400: oklch(0.706 0.011 264);
+  /* 425 / 575 are the lightest greys that still clear 3:1 against every surface
+     in their theme. They exist for one job — the boundary of a form control,
+     which WCAG 1.4.11 treats as information, not decoration. */
+  --ss-neutral-425: oklch(0.640 0.011 264);
+  /* 450 / 550 replace 500 for de-emphasised *text*. A 500 grey measures 4.0–4.4
+     against the surfaces it actually sits on, i.e. just under AA, and it is the
+     colour of every caption in the app. */
+  --ss-neutral-450: oklch(0.594 0.013 264);
+  --ss-neutral-500: oklch(0.565 0.013 264);
+  --ss-neutral-550: oklch(0.544 0.013 264);
+  --ss-neutral-575: oklch(0.510 0.013 264);
+  --ss-neutral-600: oklch(0.462 0.014 264);
+  --ss-neutral-700: oklch(0.379 0.014 264);
+  --ss-neutral-800: oklch(0.279 0.013 264);
+  --ss-neutral-850: oklch(0.235 0.012 264);
+  --ss-neutral-900: oklch(0.194 0.012 264);
+  --ss-neutral-950: oklch(0.155 0.011 264);
+  --ss-neutral-1000: oklch(0.126 0.010 264);
+
+  /* Primary — indigo. Confident, technical, not playful. */
+  --ss-primary-50: oklch(0.970 0.017 272);
+  --ss-primary-100: oklch(0.938 0.034 272);
+  --ss-primary-200: oklch(0.882 0.064 272);
+  --ss-primary-300: oklch(0.806 0.104 272);
+  --ss-primary-400: oklch(0.702 0.155 272);
+  --ss-primary-500: oklch(0.606 0.192 272);
+  --ss-primary-600: oklch(0.545 0.206 272);
+  --ss-primary-700: oklch(0.487 0.196 272);
+  --ss-primary-800: oklch(0.416 0.166 272);
+  --ss-primary-900: oklch(0.360 0.132 272);
+  --ss-primary-950: oklch(0.256 0.094 272);
+
+  /* Success — green.
+     650 is the step used as *text* and as a fill behind white text. Green and
+     amber are intrinsically luminous, so the 600 step of each measures ~3.2–3.7
+     against white — fine for a status dot, short of AA for a word. */
+  --ss-success-50: oklch(0.968 0.024 162);
+  --ss-success-100: oklch(0.930 0.052 162);
+  --ss-success-500: oklch(0.696 0.155 162);
+  --ss-success-600: oklch(0.596 0.135 163);
+  --ss-success-650: oklch(0.530 0.116 163);
+  --ss-success-700: oklch(0.508 0.113 164);
+  --ss-success-900: oklch(0.300 0.062 165);
+  --ss-success-950: oklch(0.223 0.045 166);
+
+  /* Warning — amber */
+  --ss-warning-50: oklch(0.973 0.032 82);
+  --ss-warning-100: oklch(0.942 0.070 82);
+  --ss-warning-500: oklch(0.769 0.163 70);
+  --ss-warning-600: oklch(0.666 0.163 58);
+  --ss-warning-650: oklch(0.558 0.144 53);
+  --ss-warning-700: oklch(0.555 0.140 53);
+  --ss-warning-900: oklch(0.332 0.084 50);
+  --ss-warning-950: oklch(0.248 0.062 50);
+
+  /* Danger — red */
+  --ss-danger-50: oklch(0.971 0.014 17);
+  --ss-danger-100: oklch(0.936 0.032 18);
+  --ss-danger-500: oklch(0.637 0.208 25);
+  --ss-danger-600: oklch(0.577 0.222 27);
+  --ss-danger-700: oklch(0.505 0.192 27);
+  --ss-danger-900: oklch(0.323 0.116 26);
+  --ss-danger-950: oklch(0.245 0.088 26);
+
+  /* Presence — collaborator identity colors (CLAUDE.md §35, §36).
+     Chosen for mutual distinguishability *and* distance from the primary ramp,
+     so a cursor is never mistaken for UI chrome. Deuteranopia-checked pairs.
+
+     A presence colour is not decoration — it is the text of an avatar's
+     initials and of a caret's name flag — so it has to clear 4.5:1 against the
+     surface it sits on, and one set of eight cannot do that on both a
+     near-white and a near-black canvas. Hue is preserved across themes, so a
+     person keeps their identity colour; only lightness moves.
+
+     Hence two ramps, resolved by the semantic blocks below. They are *not*
+     declared as `--ss-presence-N` here: the light block's selector includes a
+     bare `:root`, so a default declared at this level would be overridden in
+     both themes and the dark one would silently get the light ramp. */
+  --ss-presence-dark-1: oklch(0.646 0.182 42);
+  --ss-presence-dark-2: oklch(0.658 0.145 190);
+  --ss-presence-dark-3: oklch(0.618 0.196 330);
+  --ss-presence-dark-4: oklch(0.686 0.152 145);
+  --ss-presence-dark-5: oklch(0.640 0.176 292);
+  --ss-presence-dark-6: oklch(0.712 0.148 85);
+  --ss-presence-dark-7: oklch(0.620 0.152 232);
+  --ss-presence-dark-8: oklch(0.600 0.170 8);
+
+  --ss-presence-light-1: oklch(0.586 0.178 42);
+  --ss-presence-light-2: oklch(0.556 0.097 190);
+  --ss-presence-light-3: oklch(0.596 0.216 330);
+  --ss-presence-light-4: oklch(0.550 0.172 145);
+  --ss-presence-light-5: oklch(0.586 0.196 292);
+  --ss-presence-light-6: oklch(0.570 0.118 85);
+  /* Hue nudged from 232 to 245: at this lightness the cyan and the blue
+     converged to within ~0.08 in OKLab, which is not enough to tell two people
+     apart at avatar size. */
+  --ss-presence-light-7: oklch(0.564 0.142 245);
+  --ss-presence-light-8: oklch(0.592 0.190 8);
+}
+
+/* -----------------------------------------------------------------------------
+   2. SEMANTIC TOKENS — LIGHT
+   -------------------------------------------------------------------------- */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Canvas & surfaces */
+  --ss-background: var(--ss-neutral-50);
+  --ss-surface: var(--ss-neutral-0);
+  --ss-surface-muted: var(--ss-neutral-100);
+  --ss-surface-raised: var(--ss-neutral-0);
+  --ss-surface-hover: var(--ss-neutral-100);
+  --ss-surface-active: var(--ss-neutral-200);
+  --ss-overlay: oklch(0.155 0.011 264 / 0.45);
+
+  /* Text */
+  --ss-foreground: var(--ss-neutral-900);
+  --ss-foreground-muted: var(--ss-neutral-600);
+  --ss-foreground-subtle: var(--ss-neutral-550);
+  --ss-muted: var(--ss-neutral-400);
+
+  /* Lines.
+     `border` and `border-strong` are structure — dividers, card edges — and are
+     deliberately quiet (§16). `border-control` is the one that carries meaning:
+     it is what tells a user where an input begins, so it meets 3:1. */
+  --ss-border: var(--ss-neutral-200);
+  --ss-border-strong: var(--ss-neutral-300);
+  --ss-border-subtle: var(--ss-neutral-100);
+  --ss-border-control: var(--ss-neutral-425);
+
+  /* Presence — the darker ramp, so initials and caret labels clear AA on white. */
+  --ss-presence-1: var(--ss-presence-light-1);
+  --ss-presence-2: var(--ss-presence-light-2);
+  --ss-presence-3: var(--ss-presence-light-3);
+  --ss-presence-4: var(--ss-presence-light-4);
+  --ss-presence-5: var(--ss-presence-light-5);
+  --ss-presence-6: var(--ss-presence-light-6);
+  --ss-presence-7: var(--ss-presence-light-7);
+  --ss-presence-8: var(--ss-presence-light-8);
+
+  /* Primary */
+  --ss-primary: var(--ss-primary-600);
+  --ss-primary-hover: var(--ss-primary-700);
+  --ss-primary-active: var(--ss-primary-800);
+  --ss-primary-foreground: var(--ss-neutral-0);
+  --ss-primary-subtle: var(--ss-primary-50);
+  --ss-primary-subtle-foreground: var(--ss-primary-700);
+  --ss-primary-border: var(--ss-primary-200);
+
+  /* Status. Success and warning use the 650 step: both are read as words
+     ("Saved", "Due today", "Reconnecting…") and both are used as a fill behind
+     white text, and the 600 step clears neither at AA. */
+  --ss-success: var(--ss-success-650);
+  --ss-success-foreground: var(--ss-neutral-0);
+  --ss-success-subtle: var(--ss-success-50);
+  --ss-success-subtle-foreground: var(--ss-success-700);
+
+  --ss-warning: var(--ss-warning-650);
+  --ss-warning-foreground: var(--ss-neutral-0);
+  --ss-warning-subtle: var(--ss-warning-50);
+  --ss-warning-subtle-foreground: var(--ss-warning-700);
+
+  --ss-danger: var(--ss-danger-600);
+  --ss-danger-foreground: var(--ss-neutral-0);
+  --ss-danger-subtle: var(--ss-danger-50);
+  --ss-danger-subtle-foreground: var(--ss-danger-700);
+
+  /* Focus — single source of truth for every focus ring in the app */
+  --ss-focus: var(--ss-primary-500);
+  --ss-focus-offset: var(--ss-background);
+
+  /* Elevation. Restrained by design (CLAUDE.md §16): hierarchy comes from
+     spacing, type and borders. Shadows only lift things that truly float. */
+  --ss-shadow-xs: 0 1px 2px 0 oklch(0.155 0.011 264 / 0.05);
+  --ss-shadow-sm: 0 1px 2px 0 oklch(0.155 0.011 264 / 0.06), 0 1px 3px 0 oklch(0.155 0.011 264 / 0.08);
+  --ss-shadow-md: 0 2px 4px -1px oklch(0.155 0.011 264 / 0.06), 0 4px 8px -2px oklch(0.155 0.011 264 / 0.08);
+  --ss-shadow-lg: 0 4px 8px -2px oklch(0.155 0.011 264 / 0.06), 0 12px 24px -4px oklch(0.155 0.011 264 / 0.10);
+  --ss-shadow-xl: 0 8px 16px -4px oklch(0.155 0.011 264 / 0.08), 0 24px 48px -8px oklch(0.155 0.011 264 / 0.14);
+}
+
+/* -----------------------------------------------------------------------------
+   3. SEMANTIC TOKENS — DARK
+   Not an inversion (CLAUDE.md §17). Dark surfaces step *up* toward the light as
+   they rise, text contrast is pulled back from pure white to reduce halation,
+   and shadows are near-useless on dark so elevation leans on surface + border.
+   -------------------------------------------------------------------------- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ss-background: var(--ss-neutral-1000);
+  --ss-surface: var(--ss-neutral-950);
+  --ss-surface-muted: var(--ss-neutral-900);
+  --ss-surface-raised: var(--ss-neutral-900);
+  --ss-surface-hover: var(--ss-neutral-850);
+  --ss-surface-active: var(--ss-neutral-800);
+  --ss-overlay: oklch(0.126 0.010 264 / 0.65);
+
+  --ss-foreground: var(--ss-neutral-100);
+  --ss-foreground-muted: var(--ss-neutral-400);
+  --ss-foreground-subtle: var(--ss-neutral-450);
+  --ss-muted: var(--ss-neutral-600);
+
+  --ss-border: var(--ss-neutral-800);
+  --ss-border-strong: var(--ss-neutral-700);
+  --ss-border-subtle: var(--ss-neutral-850);
+  --ss-border-control: var(--ss-neutral-575);
+
+  /* Presence — the vivid ramp. Must be restated here: the light block's
+     selector matches a bare `:root`, so without this the dark theme would
+     inherit the light ramp. */
+  --ss-presence-1: var(--ss-presence-dark-1);
+  --ss-presence-2: var(--ss-presence-dark-2);
+  --ss-presence-3: var(--ss-presence-dark-3);
+  --ss-presence-4: var(--ss-presence-dark-4);
+  --ss-presence-5: var(--ss-presence-dark-5);
+  --ss-presence-6: var(--ss-presence-dark-6);
+  --ss-presence-7: var(--ss-presence-dark-7);
+  --ss-presence-8: var(--ss-presence-dark-8);
+
+  /* Lifted one step: a 600 indigo goes muddy against a near-black canvas. */
+  --ss-primary: var(--ss-primary-500);
+  --ss-primary-hover: var(--ss-primary-400);
+  --ss-primary-active: var(--ss-primary-300);
+  --ss-primary-foreground: var(--ss-neutral-1000);
+  --ss-primary-subtle: oklch(0.545 0.206 272 / 0.16);
+  --ss-primary-subtle-foreground: var(--ss-primary-300);
+  --ss-primary-border: oklch(0.545 0.206 272 / 0.32);
+
+  --ss-success: var(--ss-success-500);
+  --ss-success-foreground: var(--ss-neutral-1000);
+  --ss-success-subtle: var(--ss-success-950);
+  --ss-success-subtle-foreground: oklch(0.800 0.120 162);
+
+  --ss-warning: var(--ss-warning-500);
+  --ss-warning-foreground: var(--ss-neutral-1000);
+  --ss-warning-subtle: var(--ss-warning-950);
+  --ss-warning-subtle-foreground: oklch(0.850 0.110 80);
+
+  --ss-danger: var(--ss-danger-500);
+  --ss-danger-foreground: var(--ss-neutral-1000);
+  --ss-danger-subtle: var(--ss-danger-950);
+  --ss-danger-subtle-foreground: oklch(0.780 0.140 20);
+
+  --ss-focus: var(--ss-primary-400);
+  --ss-focus-offset: var(--ss-background);
+
+  --ss-shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.30);
+  --ss-shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.36), 0 1px 3px 0 oklch(0 0 0 / 0.30);
+  --ss-shadow-md: 0 2px 4px -1px oklch(0 0 0 / 0.40), 0 4px 8px -2px oklch(0 0 0 / 0.36);
+  --ss-shadow-lg: 0 4px 8px -2px oklch(0 0 0 / 0.44), 0 12px 24px -4px oklch(0 0 0 / 0.40);
+  --ss-shadow-xl: 0 8px 16px -4px oklch(0 0 0 / 0.50), 0 24px 48px -8px oklch(0 0 0 / 0.46);
+}
+
+/* -----------------------------------------------------------------------------
+   4. TAILWIND THEME
+   `@theme inline` maps semantics into Tailwind's namespaces, so `bg-surface`
+   compiles to `var(--ss-surface)` and follows the theme at runtime — no class
+   duplication, no `dark:` variant on every element.
+   -------------------------------------------------------------------------- */
+@theme inline {
+  /* — Color ————————————————————————————————————————————————— */
+  --color-background: var(--ss-background);
+  --color-surface: var(--ss-surface);
+  --color-surface-muted: var(--ss-surface-muted);
+  --color-surface-raised: var(--ss-surface-raised);
+  --color-surface-hover: var(--ss-surface-hover);
+  --color-surface-active: var(--ss-surface-active);
+  --color-overlay: var(--ss-overlay);
+
+  --color-foreground: var(--ss-foreground);
+  --color-foreground-muted: var(--ss-foreground-muted);
+  --color-foreground-subtle: var(--ss-foreground-subtle);
+  --color-muted: var(--ss-muted);
+
+  --color-border: var(--ss-border);
+  --color-border-strong: var(--ss-border-strong);
+  --color-border-subtle: var(--ss-border-subtle);
+  --color-border-control: var(--ss-border-control);
+
+  --color-primary: var(--ss-primary);
+  --color-primary-hover: var(--ss-primary-hover);
+  --color-primary-active: var(--ss-primary-active);
+  --color-primary-foreground: var(--ss-primary-foreground);
+  --color-primary-subtle: var(--ss-primary-subtle);
+  --color-primary-subtle-foreground: var(--ss-primary-subtle-foreground);
+  --color-primary-border: var(--ss-primary-border);
+
+  --color-success: var(--ss-success);
+  --color-success-foreground: var(--ss-success-foreground);
+  --color-success-subtle: var(--ss-success-subtle);
+  --color-success-subtle-foreground: var(--ss-success-subtle-foreground);
+
+  --color-warning: var(--ss-warning);
+  --color-warning-foreground: var(--ss-warning-foreground);
+  --color-warning-subtle: var(--ss-warning-subtle);
+  --color-warning-subtle-foreground: var(--ss-warning-subtle-foreground);
+
+  --color-danger: var(--ss-danger);
+  --color-danger-foreground: var(--ss-danger-foreground);
+  --color-danger-subtle: var(--ss-danger-subtle);
+  --color-danger-subtle-foreground: var(--ss-danger-subtle-foreground);
+
+  --color-focus: var(--ss-focus);
+
+  --color-presence-1: var(--ss-presence-1);
+  --color-presence-2: var(--ss-presence-2);
+  --color-presence-3: var(--ss-presence-3);
+  --color-presence-4: var(--ss-presence-4);
+  --color-presence-5: var(--ss-presence-5);
+  --color-presence-6: var(--ss-presence-6);
+  --color-presence-7: var(--ss-presence-7);
+  --color-presence-8: var(--ss-presence-8);
+
+  /* — Typography ———————————————————————————————————————————— */
+  --font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace,
+    SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* 14px body is the SaaS-application norm — denser than a marketing site,
+     which is what a workspace tool needs. Negative tracking on large sizes
+     keeps headings from looking loose. (CLAUDE.md §13) */
+  --text-display: 2.5rem;
+  --text-display--line-height: 2.75rem;
+  --text-display--letter-spacing: -0.022em;
+  --text-display--font-weight: 600;
+
+  --text-h1: 1.875rem;
+  --text-h1--line-height: 2.25rem;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 600;
+
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 2rem;
+  --text-h2--letter-spacing: -0.017em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.625rem;
+  --text-h3--letter-spacing: -0.011em;
+  --text-h3--font-weight: 600;
+
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5rem;
+  --text-body-lg--letter-spacing: -0.006em;
+
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.375rem;
+  --text-body--letter-spacing: -0.002em;
+
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.25rem;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-caption--letter-spacing: 0.005em;
+
+  /* Three weights only. More reads as indecision. (CLAUDE.md §13) */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* — Spacing ——————————————————————————————————————————————
+     4px base. Tailwind's numeric scale already lands exactly on the approved
+     ramp (4 8 12 16 20 24 32 40 48 64 80 = 1 2 3 4 5 6 8 10 12 16 20), so the
+     scale is enforced by using the default steps. (CLAUDE.md §14) */
+  --spacing: 0.25rem;
+
+  /* — Radius ———————————————————————————————————————————————
+     Controls 8, cards 12, dialogs 16. Nothing is a pill except avatars and
+     status dots. (CLAUDE.md §15) */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* — Elevation ————————————————————————————————————————————— */
+  --shadow-xs: var(--ss-shadow-xs);
+  --shadow-sm: var(--ss-shadow-sm);
+  --shadow-md: var(--ss-shadow-md);
+  --shadow-lg: var(--ss-shadow-lg);
+  --shadow-xl: var(--ss-shadow-xl);
+
+  /* — Motion ———————————————————————————————————————————————
+     Short and mostly ease-out: UI should feel like it settles, not like it
+     performs. (CLAUDE.md §70) */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --duration-instant: 80ms;
+  --duration-fast: 140ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
+
+  /* — Layout ————————————————————————————————————————————————
+     Shared shell metrics so sidebar/topbar stay in lockstep across breakpoints
+     once the app shell lands in Milestone 2. */
+  --spacing-sidebar: 15rem;
+  --spacing-sidebar-collapsed: 3.5rem;
+  --spacing-topbar: 3.25rem;
+}

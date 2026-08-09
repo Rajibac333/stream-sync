@@ -1,0 +1,12 @@
+# Production dependencies.
+
+-r base.txt
+
+# Process manager. Supervises uvicorn workers rather than serving WSGI itself
+# — WebSockets need ASGI, and gunicorn's worker management is still worth
+# having in front of it.
+gunicorn==23.0.0
+
+# The ASGI worker gunicorn runs. `standard` pulls in uvloop and httptools,
+# which is what makes it worth using over the pure-Python event loop.
+uvicorn[standard]==0.34.0
